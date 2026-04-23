@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Texas Hold'em Poker</title>
-    <style>
+    <link rel="stylesheet" href="css/style.css">
+    <!--
         /* ===== GLOBAL STYLES ===== */
         * {
             margin: 0;
@@ -58,13 +59,16 @@
             align-items: center;
             gap: 10px;
             transition: all 0.3s ease;
+            z-index: 12;
         }
 
         /* Bottom - Human Player */
         #player0 {
-            bottom: 20px;
+            bottom: 140px;
             left: 50%;
             transform: translateX(-50%);
+            width: max-content;
+            z-index: 18;
         }
 
         /* Left AI */
@@ -159,6 +163,17 @@
         .player-cards {
             display: flex;
             gap: 8px;
+            position: relative;
+            z-index: 16;
+        }
+
+        #player0 .player-cards {
+            margin-bottom: 2px;
+        }
+
+        #player0 .player-info {
+            position: relative;
+            z-index: 15;
         }
 
         .card {
@@ -225,16 +240,23 @@
             left: 50%;
             transform: translate(-50%, -50%);
             display: flex;
+            justify-content: center;
+            align-items: center;
             gap: 12px;
-            padding: 20px;
-            background: rgba(0, 0, 0, 0.3);
+            min-width: min(440px, 55vw);
+            min-height: 124px;
+            padding: 16px 20px;
+            background: rgba(0, 0, 0, 0.24);
             border-radius: 15px;
+            box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.22);
+            z-index: 8;
+            pointer-events: none;
         }
 
         /* ===== POT DISPLAY ===== */
         #potDisplay {
             position: absolute;
-            top: 40%;
+            top: calc(50% - 110px);
             left: 50%;
             transform: translateX(-50%);
             background: rgba(0, 0, 0, 0.8);
@@ -244,21 +266,25 @@
             font-weight: bold;
             color: #ffd700;
             border: 2px solid #ffd700;
+            z-index: 14;
         }
 
         /* ===== CONTROLS ===== */
         #controls {
             position: absolute;
-            bottom: 120px;
+            bottom: 28px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
             gap: 10px;
             align-items: center;
             background: rgba(0, 0, 0, 0.8);
             padding: 15px 20px;
             border-radius: 15px;
             border: 2px solid #ffd700;
+            z-index: 30;
         }
 
         button {
@@ -362,6 +388,50 @@
             #gameContainer {
                 width: 98vw;
                 height: 95vh;
+                padding: 30px;
+            }
+
+            #player0 {
+                bottom: 150px;
+            }
+
+            #player1 {
+                left: 26px;
+            }
+
+            #player3 {
+                right: 26px;
+            }
+
+            #controls {
+                bottom: 20px;
+                width: min(92vw, 720px);
+                padding: 12px 16px;
+                gap: 8px;
+            }
+
+            #communityCards {
+                min-width: min(360px, 68vw);
+                min-height: 108px;
+            }
+
+            #potDisplay {
+                top: calc(50% - 96px);
+                font-size: 21px;
+                padding: 10px 22px;
+            }
+
+            .player-info {
+                min-width: 132px;
+                padding: 8px 14px;
+            }
+
+            .player-name {
+                font-size: 16px;
+            }
+
+            .player-chips {
+                font-size: 14px;
             }
             
             .card {
@@ -369,13 +439,90 @@
                 height: 85px;
                 font-size: 16px;
             }
+
+            .card .rank {
+                font-size: 24px;
+            }
+
+            .card .suit {
+                font-size: 26px;
+            }
+
+            button {
+                padding: 10px 14px;
+                font-size: 14px;
+            }
+
+            input[type="number"] {
+                width: 90px;
+                padding: 8px;
+                font-size: 14px;
+            }
             
             #gameLog {
                 width: 250px;
                 max-height: 300px;
+                font-size: 12px;
             }
         }
-    </style>
+
+        @media (max-width: 1024px) {
+            #player0 {
+                bottom: 156px;
+            }
+
+            #player2 {
+                top: 20px;
+            }
+
+            #communityCards {
+                min-width: min(330px, 72vw);
+                gap: 8px;
+                padding: 12px 14px;
+            }
+
+            #gameLog {
+                width: 220px;
+                max-height: 240px;
+                right: 14px;
+                top: 14px;
+                padding: 10px;
+            }
+
+            #gameLog h3 {
+                font-size: 15px;
+                margin-bottom: 6px;
+            }
+        }
+
+        @media (max-width: 900px) {
+            #gameContainer {
+                border-width: 10px;
+            }
+
+            #player0 {
+                bottom: 162px;
+            }
+
+            #controls {
+                width: min(94vw, 680px);
+                bottom: 16px;
+            }
+
+            .player-info {
+                min-width: 120px;
+                padding: 7px 12px;
+            }
+
+            #communityCards {
+                min-width: min(300px, 76vw);
+            }
+
+            #potDisplay {
+                top: calc(50% - 90px);
+            }
+        }
+    -->
 </head>
 <body>
     <div id="gameContainer">
@@ -396,7 +543,8 @@
         </div>
     </div>
 
-    <script>
+    <script src="js/game.js"></script>
+    <!--
         /* ===== GAME STATE ===== */
         const SUITS = ['♠', '♥', '♦', '♣'];
         const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
@@ -743,6 +891,8 @@
             for (let i = 0; i < count; i++) {
                 gameState.communityCards.push(gameState.deck.pop());
             }
+
+            renderCommunityCards();
         }
 
         /* ===== BETTING ROUND ===== */
@@ -986,16 +1136,21 @@
         }
 
         /* ===== UI UPDATES ===== */
+        function renderCommunityCards() {
+            const communityDiv = document.getElementById('communityCards');
+            communityDiv.innerHTML = '';
+
+            gameState.communityCards.forEach(card => {
+                communityDiv.appendChild(createCardElement(card, false));
+            });
+        }
+
         function updateUI() {
             // Update pot
             document.getElementById('potDisplay').textContent = `Pot: $${gameState.pot}`;
             
             // Update community cards
-            const communityDiv = document.getElementById('communityCards');
-            communityDiv.innerHTML = '';
-            gameState.communityCards.forEach(card => {
-                communityDiv.appendChild(createCardElement(card, false));
-            });
+            renderCommunityCards();
             
             // Update players
             gameState.players.forEach((player, index) => {
@@ -1100,6 +1255,6 @@
 
         /* ===== START GAME ===== */
         window.addEventListener('load', initGame);
-    </script>
+    -->
 </body>
 </html>
