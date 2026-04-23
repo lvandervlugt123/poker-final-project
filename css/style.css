@@ -91,6 +91,7 @@ body {
     text-align: center;
     border: 2px solid #ffd700;
     min-width: 150px;
+    transition: transform 180ms ease, box-shadow 220ms ease, border-color 220ms ease;
 }
 
 .player-info.active {
@@ -135,6 +136,33 @@ body {
     font-size: 12px;
     color: #aaa;
     font-style: italic;
+    min-height: 16px;
+}
+
+.player.action-label .player-name {
+    text-transform: uppercase;
+    animation: action-bounce 320ms ease-out;
+}
+
+.player.checked .player-info {
+    box-shadow: 0 0 18px rgba(90, 180, 255, 0.25);
+}
+
+.player.called .player-info {
+    box-shadow: 0 0 18px rgba(130, 220, 255, 0.3);
+}
+
+.player.raised .player-info,
+.player.allin .player-info {
+    box-shadow: 0 0 24px rgba(255, 214, 107, 0.38);
+    border-color: #ffe08a;
+}
+
+@keyframes action-bounce {
+    0% { transform: translateY(0); }
+    40% { transform: translateY(-4px); }
+    70% { transform: translateY(0); }
+    100% { transform: translateY(0); }
 }
 
 .dealer-button {
@@ -181,17 +209,40 @@ body {
     font-weight: bold;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     position: relative;
-    animation: dealCard 0.3s ease-out;
     border: 2px solid #333;
+    transition: transform 220ms ease, filter 220ms ease, opacity 220ms ease;
 }
 
-@keyframes dealCard {
+.card.is-dealing {
+    animation: dealCardSmooth 540ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--deal-delay, 0ms);
+}
+
+.card.board-new {
+    animation: boardCardIn 500ms cubic-bezier(0.2, 0.95, 0.3, 1) both;
+    animation-delay: var(--deal-delay, 0ms);
+}
+
+@keyframes dealCardSmooth {
     from {
-        transform: translateY(-100px) rotate(-180deg);
+        transform: translateY(-40px) scale(0.82) rotate(-10deg);
+        opacity: 0;
+        filter: blur(1px);
+    }
+    to {
+        transform: translateY(0) scale(1) rotate(0);
+        opacity: 1;
+        filter: blur(0);
+    }
+}
+
+@keyframes boardCardIn {
+    from {
+        transform: translateY(-26px) scale(0.86);
         opacity: 0;
     }
     to {
-        transform: translateY(0) rotate(0);
+        transform: translateY(0) scale(1);
         opacity: 1;
     }
 }
@@ -259,6 +310,12 @@ body {
     color: #ffd700;
     border: 2px solid #ffd700;
     z-index: 14;
+    transition: transform 220ms ease, box-shadow 220ms ease;
+}
+
+#potDisplay.pot-pulse {
+    transform: translateX(-50%) scale(1.045);
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.45);
 }
 
 /* ===== CONTROLS ===== */
@@ -354,6 +411,12 @@ input[type="number"] {
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     font-size: 13px;
     line-height: 1.4;
+    animation: logIn 220ms ease-out;
+}
+
+@keyframes logIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .log-entry:last-child {
