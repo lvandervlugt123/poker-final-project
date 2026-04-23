@@ -16,6 +16,10 @@ body {
     align-items: center;
 }
 
+.hidden {
+    display: none !important;
+}
+
 /* ===== POKER TABLE ===== */
 #gameContainer {
     width: 95vw;
@@ -41,6 +45,117 @@ body {
     border: 2px solid rgba(255, 215, 0, 0.3);
     border-radius: 50% / 40%;
     pointer-events: none;
+}
+
+#topHud {
+    position: absolute;
+    top: 16px;
+    left: 18px;
+    z-index: 42;
+}
+
+#helpBtn {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 2px solid #ffd700;
+    background: rgba(0, 0, 0, 0.78);
+    color: #ffd700;
+    font-size: 19px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: transform 140ms ease, box-shadow 180ms ease;
+}
+
+#helpBtn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.5);
+}
+
+#performancePanel {
+    position: absolute;
+    top: 20px;
+    left: 62px;
+    width: 240px;
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid rgba(255, 215, 0, 0.65);
+    border-radius: 10px;
+    padding: 10px 12px;
+    z-index: 35;
+}
+
+#performancePanel h3 {
+    font-size: 15px;
+    color: #ffd700;
+    margin-bottom: 8px;
+}
+
+.perf-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.perf-row:last-child {
+    border-bottom: none;
+}
+
+.perf-row strong {
+    color: #fff6cc;
+}
+
+.help-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.62);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+}
+
+.help-modal-content {
+    width: min(640px, 92vw);
+    max-height: 80vh;
+    overflow-y: auto;
+    background: #122a1d;
+    border: 2px solid #ffd700;
+    border-radius: 12px;
+    padding: 18px 18px 14px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.48);
+    position: relative;
+}
+
+.help-modal-content h2 {
+    color: #ffd700;
+    margin-bottom: 10px;
+    font-size: 22px;
+}
+
+.help-modal-content ul {
+    margin-left: 18px;
+    line-height: 1.45;
+}
+
+.help-modal-content li {
+    margin-bottom: 8px;
+    color: #f2f4e8;
+}
+
+.help-close {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    border: none;
+    background: transparent;
+    color: #ffd700;
+    font-size: 28px;
+    cursor: pointer;
+    line-height: 1;
 }
 
 /* ===== PLAYER POSITIONS ===== */
@@ -418,15 +533,17 @@ input[type="number"] {
 /* ===== GAME LOG ===== */
 #gameLog {
     position: absolute;
-    top: 20px;
+    top: 14px;
     right: 20px;
-    width: 300px;
-    max-height: 400px;
+    width: min(430px, 38vw);
+    max-height: 160px;
     background: rgba(0, 0, 0, 0.9);
     border: 2px solid #ffd700;
     border-radius: 10px;
-    padding: 15px;
+    padding: 10px 12px;
     overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 36;
 }
 
 #gameLog h3 {
@@ -544,9 +661,14 @@ input[type="number"] {
     }
     
     #gameLog {
-        width: 250px;
-        max-height: 300px;
+        width: min(360px, 36vw);
+        max-height: 140px;
         font-size: 12px;
+    }
+
+    #performancePanel {
+        width: 210px;
+        left: 58px;
     }
 }
 
@@ -566,8 +688,8 @@ input[type="number"] {
     }
 
     #gameLog {
-        width: 220px;
-        max-height: 240px;
+        width: min(320px, 34vw);
+        max-height: 132px;
         right: 14px;
         top: 14px;
         padding: 10px;
@@ -576,6 +698,17 @@ input[type="number"] {
     #gameLog h3 {
         font-size: 15px;
         margin-bottom: 6px;
+    }
+
+    #performancePanel {
+        top: 14px;
+        left: 54px;
+        width: 195px;
+        padding: 8px 10px;
+    }
+
+    .perf-row {
+        font-size: 11px;
     }
 }
 
