@@ -527,6 +527,20 @@
 <body>
     <div id="gameContainer">
         <!-- Players will be dynamically created -->
+        <div id="topHud">
+            <button id="helpBtn" title="How to Play" aria-label="How to Play">?</button>
+        </div>
+
+        <div id="performancePanel" aria-live="polite">
+            <h3>Your Performance</h3>
+            <div class="perf-row"><span>Hands Played</span><strong id="statHandsPlayed">0</strong></div>
+            <div class="perf-row"><span>VPIP</span><strong id="statVpip">0%</strong></div>
+            <div class="perf-row"><span>Hands Won</span><strong id="statHandsWon">0</strong></div>
+            <div class="perf-row"><span>Win Rate</span><strong id="statWinRate">0%</strong></div>
+            <div class="perf-row"><span>Amount Won (Gross)</span><strong id="statGrossWon">$0</strong></div>
+            <div class="perf-row"><span>Net Profit</span><strong id="statNetWon">$0</strong></div>
+        </div>
+
         <div id="potDisplay">Pot: $0</div>
         <div id="communityCards"></div>
         <div id="controls">
@@ -540,6 +554,21 @@
         <div id="gameLog">
             <h3>Game Log</h3>
             <div id="logContent"></div>
+        </div>
+    </div>
+
+    <div id="helpModal" class="help-modal hidden" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+        <div class="help-modal-content">
+            <button id="helpCloseBtn" class="help-close" aria-label="Close Help">×</button>
+            <h2 id="helpTitle">How to Play Texas Hold'em</h2>
+            <ul>
+                <li>Each player gets 2 private hole cards.</li>
+                <li>Betting rounds: <strong>Preflop</strong>, <strong>Flop</strong> (3 cards), <strong>Turn</strong> (1 card), <strong>River</strong> (1 card).</li>
+                <li>Actions: <strong>Fold</strong> (give up), <strong>Check</strong> (bet 0), <strong>Call</strong> (match current bet), <strong>Raise</strong> (increase bet).</li>
+                <li>Preflop action starts left of Big Blind. Postflop action starts left of Dealer.</li>
+                <li>At showdown, best 5-card hand using any combo of hole + board wins the pot.</li>
+                <li>Hand ranking (high to low): Royal Flush, Straight Flush, Four of a Kind, Full House, Flush, Straight, Trips, Two Pair, Pair, High Card.</li>
+            </ul>
         </div>
     </div>
 
