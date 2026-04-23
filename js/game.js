@@ -9,7 +9,8 @@ const RANK_VALUES = {
 const SMALL_BLIND = 10;
 const BIG_BLIND = 20;
 const STARTING_CHIPS = 1000;
-const AI_THINK_MS = 450;
+const AI_THINK_MIN_MS = 2000;
+const AI_THINK_MAX_MS = 3000;
 const MAX_LOG_ENTRIES = 120;
 const ACTION_LABEL_DURATION_MS = 850;
 const SHOWDOWN_TRANSFER_MIN_MS = 560;
@@ -842,11 +843,12 @@ function runTurnLoop() {
 
     if (player.isAI) {
         const token = gameState.turnToken;
+        const thinkDelay = AI_THINK_MIN_MS + Math.floor(Math.random() * (AI_THINK_MAX_MS - AI_THINK_MIN_MS + 1));
         setTimeout(() => {
             if (token !== gameState.turnToken) return;
             const decision = makeAIDecision(player);
             applyAction(idx, decision);
-        }, AI_THINK_MS + Math.floor(Math.random() * 250));
+        }, thinkDelay);
     }
 }
 
