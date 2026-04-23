@@ -31,8 +31,73 @@ let gameState = {
     playersToAct: [],
     boardAnimatedCount: 0,
     potPulseTimer: null,
-    actionLabelTimers: new Map()
+    actionLabelTimers: new Map(),
+    performance: {
+        handsPlayed: 0,
+        preflopOpportunities: 0,
+        vpipHands: 0,
+        handsWon: 0,
+        grossWon: 0
+    },
+    handTracking: {
+        humanVoluntaryPutInPreflop: false,
+        humanCanTrackThisHand: false,
+        humanWonThisHand: false
+    }
 };
+
+function getHumanPlayer() {
+    return gameState.players.find((p) => p.id === 0) || null;
+}
+
+function formatCurrency(amount) {
+    const value = Number.isFinite(amount) ? amount : 0;
+    const sign = value > 0 ? '+' : '';
+    return `${sign}$${value}`;
+}
+
+function updatePerformancePanel() {
+    const human = getHumanPlayer();
+    const chips = human ? human.chips : 0;
+
+    const { handsPlayed, preflopOpportunities, vpipHands, handsWon, grossWon } = gameState.performance;
+    const vpipPct = preflopOpportunities > 0 ? (vpipHands / preflopOpportunities) * 100 : 0;
+    const winRate = handsPlayed > 0 ? (handsWon / handsPlayed) * 100 : 0;
+    const net = chips - STARTING_CHIPS;
+
+    const setValue = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    };
+
+    setValue('statHandsPlayed', `${handsPlayed}`);
+    setValue('statVpip', `${vpipPct.toFixed(1)}%`);
+    setValue('statHandsWon', `${handsWon}`);
+    setValue('statWinRate', `${winRate.toFixed(1)}%`);
+    setValue('statGrossWon', `$${grossWon}`);
+    setValue('statNetWon', formatCurrency(net));
+}
+
+function trackHumanPreflopVoluntaryAction() {
+    if (gameState.phase !== 'preflop') return;
+    if (!gameState.handTracking.humanCanTrackThisHand) return;
+    if (gameState.handTracking.humanVoluntaryPutInPreflop) return;
+
+    gameState.handTracking.humanVoluntaryPutInPreflop = true;
+    gameState.performance.vpipHands += 1;
+    updatePerformancePanel();
+}
+
+function trackHumanHandWin(amount) {
+    if (!gameState.handTracking.humanCanTrackThisHand) return;
+    if (gameState.handTracking.humanWonThisHand) return;
+    if (!(amount > 0)) return;
+
+    gameState.handTracking.humanWonThisHand = true;
+    gameState.performance.handsWon += 1;
+    gameState.performance.grossWon += amount;
+    updatePerformancePanel();
+}
 
 /* ===== DECK MANAGEMENT ===== */
 function createDeck() {
@@ -300,6 +365,7 @@ function createPlayer(id, name, isAI) {
         allIn: false,
         actedThisStreet: false,
         eliminated: false,
+        streetAction: '',
         actionState: {
             name: '',
             labelUntil: 0
@@ -364,6 +430,27 @@ function nextAliveIndex(fromIdx) {
         if (!gameState.players[idx].eliminated) return idx;
     }
     return fromIdx;
+}
+
+function getBlindSeatIndexes() {
+    const alive = alivePlayers();
+    if (alive.length < 2) {
+        return { smallBlindPos: -1, bigBlindPos: -1 };
+    }
+
+    // Heads-up rule:
+    // Dealer posts SB, other player posts BB.
+    if (alive.length === 2) {
+        const smallBlindPos = gameState.dealerPosition;
+        const bigBlindPos = nextAliveIndex(gameState.dealerPosition);
+        return { smallBlindPos, bigBlindPos };
+    }
+
+    // 3+ players:
+    // SB is left of dealer, BB is left of SB.
+    const smallBlindPos = nextAliveIndex(gameState.dealerPosition);
+    const bigBlindPos = nextAliveIndex(smallBlindPos);
+    return { smallBlindPos, bigBlindPos };
 }
 
 function findNextActionableIndex(fromIdx) {
@@ -444,9 +531,15 @@ function checkForImmediateWin() {
     const inHand = inHandPlayers();
     if (inHand.length !== 1) return false;
     const winner = inHand[0];
+    const amountWon = gameState.pot;
     winner.chips += gameState.pot;
     addLog(`${winner.name} wins $${gameState.pot} (everyone folded)`);
     gameState.pot = 0;
+
+    if (winner.id === 0) {
+        trackHumanHandWin(amountWon);
+    }
+
     gameState.phase = 'complete';
     markEliminations();
     updateUI();
@@ -519,20 +612,33 @@ function startNewRound() {
     gameState.phase = 'preflop';
     gameState.minRaise = BIG_BLIND;
 
+    const human = getHumanPlayer();
+    const humanCanTrack = !!human && !human.eliminated;
+    gameState.handTracking = {
+        humanVoluntaryPutInPreflop: false,
+        humanCanTrackThisHand: humanCanTrack,
+        humanWonThisHand: false
+    };
+
+    if (humanCanTrack) {
+        gameState.performance.handsPlayed += 1;
+        gameState.performance.preflopOpportunities += 1;
+    }
+
     for (const p of gameState.players) {
         p.hand = [];
         p.currentBet = 0;
         p.folded = p.eliminated;
         p.allIn = false;
         p.actedThisStreet = false;
+        p.streetAction = '';
         setPlayerActionState(p, '');
     }
 
     document.querySelectorAll('.winner').forEach((el) => el.classList.remove('winner'));
 
     gameState.dealerPosition = nextAliveIndex(gameState.dealerPosition);
-    const smallBlindPos = nextAliveIndex(gameState.dealerPosition);
-    const bigBlindPos = nextAliveIndex(smallBlindPos);
+    const { smallBlindPos, bigBlindPos } = getBlindSeatIndexes();
 
     gameState.smallBlindPosition = smallBlindPos;
     gameState.bigBlindPosition = bigBlindPos;
@@ -547,6 +653,7 @@ function startNewRound() {
 
     dealHoleCards();
 
+    // Preflop starts left of BB (which is dealer in heads-up, per rules)
     const preflopStart = findNextActionableIndex(bigBlindPos);
     gameState.playersToAct = buildFullActionQueue(preflopStart);
     gameState.currentPlayerIndex = gameState.playersToAct[0] ?? -1;
@@ -554,6 +661,7 @@ function startNewRound() {
     addLog(`Dealer: ${gameState.players[gameState.dealerPosition].name}`);
 
     updateUI({ animateHoleDeal: true });
+    updatePerformancePanel();
     runTurnLoop();
 }
 
@@ -563,6 +671,7 @@ function advancePhase() {
     for (const p of gameState.players) {
         p.currentBet = 0;
         p.actedThisStreet = false;
+        p.streetAction = '';
     }
     gameState.currentBet = 0;
     gameState.minRaise = BIG_BLIND;
@@ -629,6 +738,13 @@ function showdown() {
         winner: w,
         payout: base + (odd > 0 && i === 0 ? odd : 0)
     }));
+
+    const humanPayout = payouts
+        .filter((p) => p.winner.player.id === 0)
+        .reduce((sum, p) => sum + p.payout, 0);
+    if (humanPayout > 0) {
+        trackHumanHandWin(humanPayout);
+    }
 
     payouts.forEach(({ winner, payout }) => {
         addLog(`${winner.player.name} wins $${payout} with ${winner.hand.name}!`);
@@ -748,25 +864,32 @@ function applyAction(playerIndex, actionRequest) {
     if (action === 'fold') {
         player.folded = true;
         player.actedThisStreet = true;
+        player.streetAction = 'Fold';
         setPlayerActionState(player, 'fold');
         addLog(`${player.name} folds`);
     } else if (action === 'check') {
         if (!canCheck) return;
         player.actedThisStreet = true;
+        player.streetAction = 'Check';
         setPlayerActionState(player, 'check');
         addLog(`${player.name} checks`);
     } else if (action === 'call') {
         if (canCheck) {
             player.actedThisStreet = true;
+            player.streetAction = 'Check';
             setPlayerActionState(player, 'check');
             addLog(`${player.name} checks`);
         } else {
             const pay = Math.min(toCall, player.chips);
+            if (player.id === 0 && gameState.phase === 'preflop' && pay > 0) {
+                trackHumanPreflopVoluntaryAction();
+            }
             player.chips -= pay;
             player.currentBet += pay;
             gameState.pot += pay;
             player.actedThisStreet = true;
             if (player.chips === 0) player.allIn = true;
+            player.streetAction = player.allIn ? `Call $${pay} (All-in)` : `Call $${pay}`;
             setPlayerActionState(player, player.allIn ? 'allin' : 'call');
             addLog(`${player.name} calls $${pay}${player.allIn ? ' (all-in)' : ''}`);
             pulsePot();
@@ -790,11 +913,15 @@ function applyAction(playerIndex, actionRequest) {
         }
 
         const pay = targetTo - player.currentBet;
+        if (player.id === 0 && gameState.phase === 'preflop' && pay > 0) {
+            trackHumanPreflopVoluntaryAction();
+        }
         player.chips -= pay;
         player.currentBet = targetTo;
         gameState.pot += pay;
         player.actedThisStreet = true;
         player.allIn = player.chips === 0;
+        player.streetAction = player.allIn ? `Raise to $${targetTo} (All-in)` : `Raise to $${targetTo}`;
         setPlayerActionState(player, player.allIn ? 'allin' : 'raise');
 
         const raiseSize = targetTo - gameState.currentBet;
@@ -923,10 +1050,10 @@ function updateUI({ animateHoleDeal = false } = {}) {
             statusDiv.textContent = 'Out';
             infoDiv.classList.add('folded');
         } else if (player.folded) {
-            statusDiv.textContent = 'Folded';
+            statusDiv.textContent = player.streetAction || 'Folded';
             infoDiv.classList.add('folded');
         } else if (player.allIn) {
-            statusDiv.textContent = 'All-in';
+            statusDiv.textContent = player.streetAction || 'All-in';
         } else {
             if (player.actionState?.name && (player.actionState.labelUntil || 0) > now) {
                 const labelMap = {
@@ -943,7 +1070,7 @@ function updateUI({ animateHoleDeal = false } = {}) {
                 if (player.actionState.name === 'raise') playerEl.classList.add('raised');
                 if (player.actionState.name === 'allin') playerEl.classList.add('allin');
             } else {
-                statusDiv.textContent = '';
+                statusDiv.textContent = player.streetAction || '';
             }
         }
 
@@ -984,6 +1111,8 @@ function updateUI({ animateHoleDeal = false } = {}) {
     document.getElementById('raiseBtn').disabled = !playerCanAct;
     document.getElementById('raiseAmount').disabled = !playerCanAct;
     document.getElementById('newGameBtn').disabled = gameState.phase !== 'complete';
+
+    updatePerformancePanel();
 }
 
 function createCardElement(card, faceDown, options = {}) {
@@ -1043,6 +1172,36 @@ document.getElementById('newGameBtn').addEventListener('click', startNewRound);
 
 document.getElementById('raiseAmount').addEventListener('keypress', (e) => {
     if (e.key === 'Enter') playerRaise();
+});
+
+const helpBtn = document.getElementById('helpBtn');
+const helpModal = document.getElementById('helpModal');
+const helpCloseBtn = document.getElementById('helpCloseBtn');
+
+if (helpBtn && helpModal) {
+    helpBtn.addEventListener('click', () => {
+        helpModal.classList.remove('hidden');
+    });
+}
+
+if (helpCloseBtn && helpModal) {
+    helpCloseBtn.addEventListener('click', () => {
+        helpModal.classList.add('hidden');
+    });
+}
+
+if (helpModal) {
+    helpModal.addEventListener('click', (e) => {
+        if (e.target === helpModal) {
+            helpModal.classList.add('hidden');
+        }
+    });
+}
+
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && helpModal && !helpModal.classList.contains('hidden')) {
+        helpModal.classList.add('hidden');
+    }
 });
 
 window.addEventListener('load', initGame);
