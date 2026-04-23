@@ -11,6 +11,9 @@ const BIG_BLIND = 20;
 const STARTING_CHIPS = 1000;
 const AI_THINK_MS = 450;
 const MAX_LOG_ENTRIES = 120;
+const ACTION_LABEL_DURATION_MS = 850;
+const SHOWDOWN_TRANSFER_MIN_MS = 560;
+const SHOWDOWN_TRANSFER_MAX_MS = 1400;
 
 let gameState = {
     players: [],
@@ -22,7 +25,10 @@ let gameState = {
     dealerPosition: 0,
     currentPlayerIndex: 0,
     phase: 'idle', // preflop, flop, turn, river, showdown, complete
-    turnToken: 0
+    turnToken: 0,
+    boardAnimatedCount: 0,
+    potPulseTimer: null,
+    actionLabelTimers: new Map()
 };
 
 /* ===== DECK MANAGEMENT ===== */
@@ -290,8 +296,50 @@ function createPlayer(id, name, isAI) {
         folded: false,
         allIn: false,
         actedThisStreet: false,
-        eliminated: false
+        eliminated: false,
+        actionState: {
+            name: '',
+            labelUntil: 0
+        }
     };
+}
+
+function clearActionLabelTimer(playerId) {
+    const timer = gameState.actionLabelTimers.get(playerId);
+    if (!timer) return;
+    clearTimeout(timer);
+    gameState.actionLabelTimers.delete(playerId);
+}
+
+function setPlayerActionState(player, actionName = '') {
+    clearActionLabelTimer(player.id);
+
+    if (!actionName) {
+        player.actionState = { name: '', labelUntil: 0 };
+        return;
+    }
+
+    const labelUntil = Date.now() + ACTION_LABEL_DURATION_MS;
+    player.actionState = { name: actionName, labelUntil };
+
+    const timer = setTimeout(() => {
+        player.actionState = { name: '', labelUntil: 0 };
+        gameState.actionLabelTimers.delete(player.id);
+        updateUI();
+    }, ACTION_LABEL_DURATION_MS + 10);
+
+    gameState.actionLabelTimers.set(player.id, timer);
+}
+
+function pulsePot() {
+    const el = document.getElementById('potDisplay');
+    if (!el) return;
+    if (gameState.potPulseTimer) clearTimeout(gameState.potPulseTimer);
+    el.classList.add('pot-pulse');
+    gameState.potPulseTimer = setTimeout(() => {
+        el.classList.remove('pot-pulse');
+        gameState.potPulseTimer = null;
+    }, 210);
 }
 
 function alivePlayers() {
@@ -359,7 +407,7 @@ function dealCommunityCards(count) {
     for (let i = 0; i < count; i++) {
         gameState.communityCards.push(gameState.deck.pop());
     }
-    renderCommunityCards();
+    renderCommunityCards(count);
 }
 
 function isBettingRoundComplete() {
@@ -441,6 +489,7 @@ function startNewRound() {
 
     gameState.deck = shuffleDeck(createDeck());
     gameState.communityCards = [];
+    gameState.boardAnimatedCount = 0;
     gameState.pot = 0;
     gameState.phase = 'preflop';
     gameState.minRaise = BIG_BLIND;
@@ -451,6 +500,7 @@ function startNewRound() {
         p.folded = p.eliminated;
         p.allIn = false;
         p.actedThisStreet = false;
+        setPlayerActionState(p, '');
     }
 
     document.querySelectorAll('.winner').forEach((el) => el.classList.remove('winner'));
@@ -473,7 +523,7 @@ function startNewRound() {
     addLog('--- New Round Started ---');
     addLog(`Dealer: ${gameState.players[gameState.dealerPosition].name}`);
 
-    updateUI();
+    updateUI({ animateHoleDeal: true });
     runTurnLoop();
 }
 
@@ -544,19 +594,80 @@ function showdown() {
     const base = Math.floor(gameState.pot / winners.length);
     let odd = gameState.pot - base * winners.length;
 
-    winners.forEach((w, i) => {
-        const payout = base + (odd > 0 && i === 0 ? odd : 0);
-        w.player.chips += payout;
-        addLog(`${w.player.name} wins $${payout} with ${w.hand.name}!`);
+    const payouts = winners.map((w, i) => ({
+        winner: w,
+        payout: base + (odd > 0 && i === 0 ? odd : 0)
+    }));
+
+    payouts.forEach(({ winner, payout }) => {
+        addLog(`${winner.player.name} wins $${payout} with ${winner.hand.name}!`);
     });
 
-    gameState.pot = 0;
-    gameState.phase = 'complete';
-    markEliminations();
-    updateUI();
+    animateShowdownPayout(payouts).then(() => {
+        gameState.phase = 'complete';
+        markEliminations();
+        updateUI();
 
-    winners.forEach((w) => {
-        document.getElementById(`info${w.player.id}`).classList.add('winner');
+        winners.forEach((w) => {
+            document.getElementById(`info${w.player.id}`).classList.add('winner');
+        });
+    });
+}
+
+function animateShowdownPayout(payouts) {
+    const startingPot = gameState.pot;
+    if (!Array.isArray(payouts) || payouts.length === 0 || startingPot <= 0) {
+        gameState.pot = 0;
+        return Promise.resolve();
+    }
+
+    const totalPayout = payouts.reduce((sum, p) => sum + p.payout, 0);
+    if (totalPayout <= 0) {
+        gameState.pot = 0;
+        return Promise.resolve();
+    }
+
+    const before = new Map();
+    payouts.forEach(({ winner }) => before.set(winner.player.id, winner.player.chips));
+
+    const duration = Math.max(
+        SHOWDOWN_TRANSFER_MIN_MS,
+        Math.min(SHOWDOWN_TRANSFER_MAX_MS, 320 + totalPayout * 2.2)
+    );
+
+    const startedAt = Date.now();
+
+    return new Promise((resolve) => {
+        function step() {
+            const now = Date.now();
+            const t = Math.min(1, (now - startedAt) / duration);
+            const eased = 1 - Math.pow(1 - t, 3);
+
+            let paidSoFar = 0;
+            payouts.forEach(({ winner, payout }) => {
+                const delta = Math.floor(payout * eased);
+                winner.player.chips = (before.get(winner.player.id) || 0) + delta;
+                paidSoFar += delta;
+            });
+
+            gameState.pot = Math.max(0, startingPot - paidSoFar);
+            updateUI();
+
+            if (t >= 1) {
+                payouts.forEach(({ winner, payout }) => {
+                    winner.player.chips = (before.get(winner.player.id) || 0) + payout;
+                });
+                gameState.pot = 0;
+                pulsePot();
+                updateUI();
+                resolve();
+                return;
+            }
+
+            requestAnimationFrame(step);
+        }
+
+        requestAnimationFrame(step);
     });
 }
 
@@ -603,14 +714,17 @@ function applyAction(playerIndex, actionRequest) {
     if (action === 'fold') {
         player.folded = true;
         player.actedThisStreet = true;
+        setPlayerActionState(player, 'fold');
         addLog(`${player.name} folds`);
     } else if (action === 'check') {
         if (!canCheck) return;
         player.actedThisStreet = true;
+        setPlayerActionState(player, 'check');
         addLog(`${player.name} checks`);
     } else if (action === 'call') {
         if (canCheck) {
             player.actedThisStreet = true;
+            setPlayerActionState(player, 'check');
             addLog(`${player.name} checks`);
         } else {
             const pay = Math.min(toCall, player.chips);
@@ -619,7 +733,9 @@ function applyAction(playerIndex, actionRequest) {
             gameState.pot += pay;
             player.actedThisStreet = true;
             if (player.chips === 0) player.allIn = true;
+            setPlayerActionState(player, player.allIn ? 'allin' : 'call');
             addLog(`${player.name} calls $${pay}${player.allIn ? ' (all-in)' : ''}`);
+            pulsePot();
         }
     } else if (action === 'raise') {
         const maxTo = player.currentBet + player.chips;
@@ -645,6 +761,7 @@ function applyAction(playerIndex, actionRequest) {
         gameState.pot += pay;
         player.actedThisStreet = true;
         player.allIn = player.chips === 0;
+        setPlayerActionState(player, player.allIn ? 'allin' : 'raise');
 
         const raiseSize = targetTo - gameState.currentBet;
         if (raiseSize >= gameState.minRaise) {
@@ -657,6 +774,7 @@ function applyAction(playerIndex, actionRequest) {
         }
 
         addLog(`${player.name} raises to $${targetTo}${player.allIn ? ' (all-in)' : ''}`);
+        pulsePot();
     } else {
         return;
     }
@@ -703,19 +821,32 @@ function playerRaise() {
 }
 
 /* ===== UI ===== */
-function renderCommunityCards() {
+function renderCommunityCards(newlyDealtCount = 0) {
     const communityDiv = document.getElementById('communityCards');
     communityDiv.innerHTML = '';
-    gameState.communityCards.forEach((card) => {
-        communityDiv.appendChild(createCardElement(card, false));
+
+    const startAnimatedIndex = Math.max(0, gameState.communityCards.length - newlyDealtCount);
+    gameState.communityCards.forEach((card, idx) => {
+        const isNew = idx >= startAnimatedIndex && newlyDealtCount > 0;
+        const dealDelayMs = isNew ? (idx - startAnimatedIndex) * 90 : 0;
+        const cardEl = createCardElement(card, false, {
+            boardNew: isNew,
+            dealDelayMs
+        });
+        communityDiv.appendChild(cardEl);
     });
+
+    gameState.boardAnimatedCount = gameState.communityCards.length;
 }
 
-function updateUI() {
+function updateUI({ animateHoleDeal = false } = {}) {
     document.getElementById('potDisplay').textContent = `Pot: $${gameState.pot}`;
-    renderCommunityCards();
+    renderCommunityCards(0);
+
+    const now = Date.now();
 
     gameState.players.forEach((player, idx) => {
+        const playerEl = document.getElementById(`player${idx}`);
         const cardsDiv = document.getElementById(`cards${idx}`);
         const infoDiv = document.getElementById(`info${idx}`);
         const chipsDiv = document.getElementById(`chips${idx}`);
@@ -726,12 +857,19 @@ function updateUI() {
         cardsDiv.innerHTML = '';
         if (player.hand.length > 0) {
             const showCards = !player.isAI || gameState.phase === 'showdown' || gameState.phase === 'complete';
-            player.hand.forEach((card) => cardsDiv.appendChild(createCardElement(card, !showCards)));
+            player.hand.forEach((card, cardIdx) => {
+                const cardEl = createCardElement(card, !showCards, {
+                    isDealing: animateHoleDeal,
+                    dealDelayMs: animateHoleDeal ? (idx * 60 + cardIdx * 90) : 0
+                });
+                cardsDiv.appendChild(cardEl);
+            });
         }
 
         chipsDiv.textContent = `$${player.chips}`;
         betDiv.textContent = player.currentBet > 0 ? `Bet: $${player.currentBet}` : '';
 
+        playerEl.classList.remove('checked', 'called', 'raised', 'allin', 'action-label');
         infoDiv.classList.remove('folded', 'active');
         if (player.eliminated) {
             statusDiv.textContent = 'Out';
@@ -742,7 +880,23 @@ function updateUI() {
         } else if (player.allIn) {
             statusDiv.textContent = 'All-in';
         } else {
-            statusDiv.textContent = '';
+            if (player.actionState?.name && (player.actionState.labelUntil || 0) > now) {
+                const labelMap = {
+                    fold: 'Fold',
+                    check: 'Check',
+                    call: 'Call',
+                    raise: 'Raise',
+                    allin: 'All-In'
+                };
+                statusDiv.textContent = labelMap[player.actionState.name] || '';
+                playerEl.classList.add('action-label');
+                if (player.actionState.name === 'check') playerEl.classList.add('checked');
+                if (player.actionState.name === 'call') playerEl.classList.add('called');
+                if (player.actionState.name === 'raise') playerEl.classList.add('raised');
+                if (player.actionState.name === 'allin') playerEl.classList.add('allin');
+            } else {
+                statusDiv.textContent = '';
+            }
         }
 
         if (
@@ -782,9 +936,25 @@ function updateUI() {
     document.getElementById('newGameBtn').disabled = gameState.phase !== 'complete';
 }
 
-function createCardElement(card, faceDown) {
+function createCardElement(card, faceDown, options = {}) {
+    const {
+        isDealing = false,
+        boardNew = false,
+        dealDelayMs = 0
+    } = options;
+
     const cardDiv = document.createElement('div');
     cardDiv.className = 'card';
+
+    if (isDealing) {
+        cardDiv.classList.add('is-dealing');
+        cardDiv.style.setProperty('--deal-delay', `${dealDelayMs}ms`);
+    }
+
+    if (boardNew) {
+        cardDiv.classList.add('board-new');
+        cardDiv.style.setProperty('--deal-delay', `${dealDelayMs}ms`);
+    }
 
     if (faceDown) {
         cardDiv.classList.add('face-down');
