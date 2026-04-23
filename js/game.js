@@ -22,10 +22,13 @@ let gameState = {
     pot: 0,
     currentBet: 0,
     minRaise: BIG_BLIND,
-    dealerPosition: 0,
+    dealerPosition: -1,
+    smallBlindPosition: -1,
+    bigBlindPosition: -1,
     currentPlayerIndex: 0,
     phase: 'idle', // preflop, flop, turn, river, showdown, complete
     turnToken: 0,
+    playersToAct: [],
     boardAnimatedCount: 0,
     potPulseTimer: null,
     actionLabelTimers: new Map()
@@ -375,6 +378,29 @@ function findNextActionableIndex(fromIdx) {
     return -1;
 }
 
+function buildFullActionQueue(startIdx) {
+    if (!Number.isInteger(startIdx) || startIdx < 0) return [];
+    const queue = [startIdx];
+    let idx = findNextActionableIndex(startIdx);
+    while (idx !== -1 && idx !== startIdx) {
+        queue.push(idx);
+        idx = findNextActionableIndex(idx);
+        if (queue.length > gameState.players.length + 1) break;
+    }
+    return queue;
+}
+
+function buildReopenQueueAfterRaise(raiserIdx) {
+    const queue = [];
+    let idx = findNextActionableIndex(raiserIdx);
+    while (idx !== -1 && idx !== raiserIdx) {
+        queue.push(idx);
+        idx = findNextActionableIndex(idx);
+        if (queue.length > gameState.players.length + 1) break;
+    }
+    return queue;
+}
+
 function resetStreetBets() {
     for (const p of gameState.players) {
         p.currentBet = 0;
@@ -411,12 +437,7 @@ function dealCommunityCards(count) {
 }
 
 function isBettingRoundComplete() {
-    const inHand = inHandPlayers();
-    if (inHand.length <= 1) return true;
-
-    const everyoneMatchedOrAllIn = inHand.every((p) => p.currentBet === gameState.currentBet || p.allIn || p.chips === 0);
-    const everyoneActed = actionablePlayers().every((p) => p.actedThisStreet);
-    return everyoneMatchedOrAllIn && everyoneActed;
+    return gameState.playersToAct.length === 0;
 }
 
 function checkForImmediateWin() {
@@ -466,7 +487,11 @@ function createPlayerElements() {
         playerDiv.innerHTML = `
             <div class="player-cards" id="cards${index}"></div>
             <div class="player-info" id="info${index}">
-                <div class="player-name">${player.name}<span class="dealer-button" id="dealer${index}" style="display:none;">D</span></div>
+                <div class="player-name">${player.name}
+                    <span class="role-badge dealer-button" id="dealer${index}" style="display:none;">D</span>
+                    <span class="role-badge sb-button" id="sb${index}" style="display:none;">SB</span>
+                    <span class="role-badge bb-button" id="bb${index}" style="display:none;">BB</span>
+                </div>
                 <div class="player-chips" id="chips${index}">$${player.chips}</div>
                 <div class="player-bet" id="bet${index}"></div>
                 <div class="player-status" id="status${index}"></div>
@@ -509,6 +534,9 @@ function startNewRound() {
     const smallBlindPos = nextAliveIndex(gameState.dealerPosition);
     const bigBlindPos = nextAliveIndex(smallBlindPos);
 
+    gameState.smallBlindPosition = smallBlindPos;
+    gameState.bigBlindPosition = bigBlindPos;
+
     postBlind(smallBlindPos, SMALL_BLIND, 'small blind');
     postBlind(bigBlindPos, BIG_BLIND, 'big blind');
 
@@ -519,7 +547,9 @@ function startNewRound() {
 
     dealHoleCards();
 
-    gameState.currentPlayerIndex = findNextActionableIndex(bigBlindPos);
+    const preflopStart = findNextActionableIndex(bigBlindPos);
+    gameState.playersToAct = buildFullActionQueue(preflopStart);
+    gameState.currentPlayerIndex = gameState.playersToAct[0] ?? -1;
     addLog('--- New Round Started ---');
     addLog(`Dealer: ${gameState.players[gameState.dealerPosition].name}`);
 
@@ -556,7 +586,8 @@ function advancePhase() {
     }
 
     const start = findNextActionableIndex(gameState.dealerPosition);
-    gameState.currentPlayerIndex = start;
+    gameState.playersToAct = buildFullActionQueue(start);
+    gameState.currentPlayerIndex = gameState.playersToAct[0] ?? -1;
     updateUI();
     runTurnLoop();
 }
@@ -680,10 +711,12 @@ function runTurnLoop() {
         return;
     }
 
-    const idx = gameState.currentPlayerIndex;
+    const idx = gameState.playersToAct[0] ?? -1;
+    gameState.currentPlayerIndex = idx;
     const player = gameState.players[idx];
     if (!player || player.eliminated || player.folded || player.allIn || player.chips <= 0) {
-        gameState.currentPlayerIndex = findNextActionableIndex(idx);
+        gameState.playersToAct.shift();
+        gameState.currentPlayerIndex = gameState.playersToAct[0] ?? -1;
         updateUI();
         runTurnLoop();
         return;
@@ -704,12 +737,13 @@ function runTurnLoop() {
 /* ===== ACTION APPLICATION ===== */
 function applyAction(playerIndex, actionRequest) {
     const player = gameState.players[playerIndex];
-    if (!player || playerIndex !== gameState.currentPlayerIndex) return;
+    if (!player || playerIndex !== gameState.currentPlayerIndex || gameState.playersToAct[0] !== playerIndex) return;
     if (player.folded || player.allIn || player.eliminated || gameState.phase === 'complete') return;
 
     const action = actionRequest?.action;
     const toCall = Math.max(0, gameState.currentBet - player.currentBet);
     const canCheck = toCall === 0;
+    let reopenedByRaise = false;
 
     if (action === 'fold') {
         player.folded = true;
@@ -773,6 +807,8 @@ function applyAction(playerIndex, actionRequest) {
             if (p.id !== player.id) p.actedThisStreet = false;
         }
 
+        reopenedByRaise = true;
+
         addLog(`${player.name} raises to $${targetTo}${player.allIn ? ' (all-in)' : ''}`);
         pulsePot();
     } else {
@@ -781,13 +817,23 @@ function applyAction(playerIndex, actionRequest) {
 
     if (checkForImmediateWin()) return;
 
+    // Current player has acted; remove from the front of action queue.
+    if (gameState.playersToAct[0] === playerIndex) {
+        gameState.playersToAct.shift();
+    }
+
+    // A raise reopens action for everyone else still eligible.
+    if (reopenedByRaise) {
+        gameState.playersToAct = buildReopenQueueAfterRaise(playerIndex);
+    }
+
     if (isBettingRoundComplete()) {
         updateUI();
         advancePhase();
         return;
     }
 
-    gameState.currentPlayerIndex = findNextActionableIndex(playerIndex);
+    gameState.currentPlayerIndex = gameState.playersToAct[0] ?? -1;
     updateUI();
     runTurnLoop();
 }
@@ -853,6 +899,8 @@ function updateUI({ animateHoleDeal = false } = {}) {
         const betDiv = document.getElementById(`bet${idx}`);
         const statusDiv = document.getElementById(`status${idx}`);
         const dealerBtn = document.getElementById(`dealer${idx}`);
+        const sbBtn = document.getElementById(`sb${idx}`);
+        const bbBtn = document.getElementById(`bb${idx}`);
 
         cardsDiv.innerHTML = '';
         if (player.hand.length > 0) {
@@ -911,6 +959,8 @@ function updateUI({ animateHoleDeal = false } = {}) {
         }
 
         dealerBtn.style.display = idx === gameState.dealerPosition ? 'inline-block' : 'none';
+        sbBtn.style.display = idx === gameState.smallBlindPosition ? 'inline-block' : 'none';
+        bbBtn.style.display = idx === gameState.bigBlindPosition ? 'inline-block' : 'none';
     });
 
     const currentPlayer = gameState.players[gameState.currentPlayerIndex];
