@@ -20,6 +20,165 @@ body {
     display: none !important;
 }
 
+/* ===== LOBBY OVERLAY ===== */
+#lobbyOverlay {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(135deg, #0d2b1a 0%, #051409 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 200;
+}
+
+.lobby-box {
+    width: min(480px, 94vw);
+    background: rgba(0, 0, 0, 0.72);
+    border: 2px solid #ffd700;
+    border-radius: 18px;
+    padding: 36px 32px 28px;
+    box-shadow: 0 0 60px rgba(0, 0, 0, 0.8);
+    text-align: center;
+}
+
+.lobby-box h1 {
+    font-size: 32px;
+    color: #ffd700;
+    margin-bottom: 6px;
+    letter-spacing: 2px;
+    text-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+}
+
+.lobby-sub {
+    color: #ccc;
+    font-size: 15px;
+    margin-bottom: 18px;
+}
+
+.lobby-hint {
+    color: #aaa;
+    font-size: 13px;
+    margin: 8px 0 12px;
+    font-style: italic;
+}
+
+.lobby-error {
+    color: #ff6b6b;
+    font-size: 14px;
+    margin-top: 12px;
+    min-height: 18px;
+    font-weight: bold;
+}
+
+/* Lobby text inputs */
+#nameInput, #codeInput {
+    display: block;
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 18px;
+    border: 2px solid #ffd700;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    margin-bottom: 14px;
+    outline: none;
+    text-align: center;
+}
+#nameInput::placeholder, #codeInput::placeholder { color: rgba(255,255,255,0.4); }
+#nameInput:focus, #codeInput:focus { border-color: #fff; background: rgba(255,255,255,0.15); }
+
+/* Lobby buttons */
+.lobby-btn {
+    display: block;
+    width: 100%;
+    padding: 13px 20px;
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+}
+.lobby-btn.primary   { background: #ffd700; color: #1a3d20; }
+.lobby-btn.secondary { background: rgba(255,255,255,0.12); color: #fff; border: 2px solid rgba(255,255,255,0.3); }
+.lobby-btn.back      { background: transparent; color: #aaa; font-size: 14px; padding: 8px; border: none; text-transform: none; letter-spacing: 0; }
+.lobby-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+.lobby-btn.primary:hover { background: #ffe44d; }
+
+/* Settings rows */
+.setting-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding: 10px 14px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 8px;
+}
+.setting-row label { font-size: 15px; color: #ddd; }
+
+.num-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+.num-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255,215,0,0.15);
+    border: 2px solid #ffd700;
+    color: #ffd700;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+.num-btn:hover { background: rgba(255,215,0,0.3); }
+#totalSeatsVal, #numAIVal { font-size: 22px; font-weight: bold; color: #ffd700; min-width: 28px; }
+
+/* Room code display */
+.room-code-display {
+    font-size: 42px;
+    font-weight: bold;
+    letter-spacing: 8px;
+    color: #ffd700;
+    margin: 4px 0 8px;
+    font-family: monospace;
+    text-shadow: 0 0 24px rgba(255,215,0,0.5);
+}
+
+/* Player slots in waiting room */
+.slot-list {
+    margin: 14px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.lobby-slot {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    font-size: 15px;
+    transition: border-color 0.2s;
+}
+.lobby-slot.filled { border-color: rgba(255,215,0,0.35); background: rgba(255,215,0,0.06); }
+.slot-icon { font-size: 18px; line-height: 1; }
+
 /* ===== POKER TABLE ===== */
 #gameContainer {
     width: 95vw;
@@ -197,6 +356,20 @@ body {
     right: 50px;
     top: 50%;
     transform: translateY(-50%);
+}
+
+/* ===== 5-PLAYER POSITIONS ===== */
+/* visual 4 = top-right area */
+#player4 {
+    right: 80px;
+    top: 22%;
+}
+
+/* ===== 6-PLAYER POSITIONS ===== */
+/* visual 5 = bottom-right */
+#player5 {
+    right: 80px;
+    bottom: 22%;
 }
 
 .player-info {
