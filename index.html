@@ -525,7 +525,80 @@
     -->
 </head>
 <body>
-    <div id="gameContainer">
+
+    <!-- ===== LOBBY OVERLAY ===== -->
+    <div id="lobbyOverlay">
+        <div class="lobby-box">
+            <h1>♠ Texas Hold'em ♠</h1>
+
+            <!-- Step 1: Enter name -->
+            <div id="stepName">
+                <p class="lobby-sub">Enter your name to get started</p>
+                <input type="text" id="nameInput" placeholder="Your name" maxlength="20" autocomplete="off">
+                <button id="btnContinue" class="lobby-btn primary">Continue →</button>
+            </div>
+
+            <!-- Step 2: Create or Join -->
+            <div id="stepMode" class="hidden">
+                <p class="lobby-sub">What would you like to do?</p>
+                <button id="btnCreate" class="lobby-btn primary">🎮 Create Game</button>
+                <button id="btnJoin"   class="lobby-btn secondary">🔗 Join Game</button>
+                <button id="btnBack1"  class="lobby-btn back">← Back</button>
+            </div>
+
+            <!-- Step 3a: Create game setup -->
+            <div id="stepCreate" class="hidden">
+                <p class="lobby-sub">Configure your table</p>
+
+                <div class="setting-row">
+                    <label>Total seats</label>
+                    <div class="num-row">
+                        <button class="num-btn" data-target="totalSeats" data-delta="-1">−</button>
+                        <span id="totalSeatsVal">4</span>
+                        <button class="num-btn" data-target="totalSeats" data-delta="1">+</button>
+                    </div>
+                </div>
+
+                <div class="setting-row">
+                    <label>AI players</label>
+                    <div class="num-row">
+                        <button class="num-btn" data-target="numAI" data-delta="-1">−</button>
+                        <span id="numAIVal">3</span>
+                        <button class="num-btn" data-target="numAI" data-delta="1">+</button>
+                    </div>
+                </div>
+
+                <p id="humanSlotsHint" class="lobby-hint">(1 human seat, 3 AI)</p>
+
+                <button id="btnConfirmCreate" class="lobby-btn primary">Create Room</button>
+                <button id="btnBack2" class="lobby-btn back">← Back</button>
+            </div>
+
+            <!-- Step 3b: Join game -->
+            <div id="stepJoin" class="hidden">
+                <p class="lobby-sub">Enter the room code</p>
+                <input type="text" id="codeInput" placeholder="e.g. AB3X7K" maxlength="6"
+                       autocomplete="off" style="text-transform:uppercase;letter-spacing:4px;font-size:22px;">
+                <button id="btnConfirmJoin" class="lobby-btn primary">Join Room</button>
+                <button id="btnBack3" class="lobby-btn back">← Back</button>
+            </div>
+
+            <!-- Step 4: Waiting room -->
+            <div id="stepWaiting" class="hidden">
+                <p class="lobby-sub">Room Code</p>
+                <h2 id="displayCode" class="room-code-display">------</h2>
+                <p class="lobby-hint">Share this code with friends to invite them!</p>
+                <div id="playerSlots" class="slot-list"></div>
+                <button id="btnStart" class="lobby-btn primary hidden">▶ Start Game</button>
+                <p id="waitHint" class="lobby-hint">Waiting for players to join…</p>
+                <button id="btnBack4" class="lobby-btn back">← Leave Room</button>
+            </div>
+
+            <p id="lobbyError" class="lobby-error"></p>
+        </div>
+    </div>
+
+    <div id="gameContainer" class="hidden">
         <!-- Players will be dynamically created -->
         <div id="topHud">
             <button id="helpBtn" title="How to Play" aria-label="How to Play">?</button>
@@ -572,6 +645,7 @@
         </div>
     </div>
 
+    <script src="/socket.io/socket.io.js"></script>
     <script src="js/game.js"></script>
     <!--
         /* ===== GAME STATE ===== */
