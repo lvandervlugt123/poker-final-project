@@ -37,7 +37,7 @@ Future Improvements
 Full poker hand rankings (straight, flush, full house, etc.)
 More advanced betting mechanics
 Improved animations and visual effects
-Multiplayer or AI opponents
+AI opponents
 Author
 
 Lucian van der Vlugt
