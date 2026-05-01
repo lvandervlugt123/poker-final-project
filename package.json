@@ -1,14 +1,8 @@
 {
   "name": "poker-final-project",
   "version": "1.0.0",
-  "description": "Multiplayer Texas Hold'em Poker",
-  "main": "server.js",
+  "description": "Single-player Texas Hold'em Poker (local AI)",
   "scripts": {
-    "start": "node server.js",
-    "dev": "npx nodemon server.js"
-  },
-  "dependencies": {
-    "express": "^4.18.2",
-    "socket.io": "^4.7.2"
+    "start": "echo \"Open index.html in a browser (no server required).\""
   }
 }
