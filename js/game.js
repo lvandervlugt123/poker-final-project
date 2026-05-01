@@ -1,5 +1,19 @@
 /* ===== CLIENT STATE ===== */
-const socket = io();
+const socket = typeof window.io === 'function'
+    ? window.io()
+    : {
+        on: () => {},
+        emit: () => {}
+    };
+
+if (typeof window.io !== 'function') {
+    window.addEventListener('DOMContentLoaded', () => {
+        const err = document.getElementById('lobbyError');
+        if (err) {
+            err.textContent = 'Realtime server not found. Open this app at http://localhost:3000 (not the Live Server port).';
+        }
+    });
+}
 
 let clientState = null;
 let mySeat = -1;
@@ -127,17 +141,22 @@ function renderWaitingRoom(data) {
 /* ===== SOCKET EVENTS ===== */
 socket.on('roomCreated', (data) => {
     isHost = true;
-    mySeat = 0;
+    mySeat = Number.isInteger(data.viewerSeat) ? data.viewerSeat : 0;
+    numPlayers = data.totalSeats;
+    renderWaitingRoom(data);
+    showStep('stepWaiting');
+});
+
+socket.on('joinedRoom', (data) => {
+    isHost = !!data.isHost;
+    mySeat = Number.isInteger(data.viewerSeat) ? data.viewerSeat : -1;
     numPlayers = data.totalSeats;
     renderWaitingRoom(data);
     showStep('stepWaiting');
 });
 
 socket.on('lobbyUpdate', (data) => {
-    if (mySeat < 0) {
-        const joined = data.slots.find(s => s.filled && !s.isAI && s.name === playerName);
-        if (joined) mySeat = joined.seat;
-    }
+    if (Number.isInteger(data.viewerSeat) && data.viewerSeat >= 0) mySeat = data.viewerSeat;
     isHost = data.isHost;
     numPlayers = data.totalSeats;
     renderWaitingRoom(data);
