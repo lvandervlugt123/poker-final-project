@@ -41,3 +41,5 @@ Multiplayer or AI opponents
 Author
 
 Lucian van der Vlugt
+
+<img width="1683" height="976" alt="Screenshot 2026-05-01 at 1 29 24 PM" src="https://github.com/user-attachments/assets/f80e7998-d901-4ecf-88c0-705a9c1aa74a" />
