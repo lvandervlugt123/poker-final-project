@@ -710,51 +710,31 @@ function applyAction(room, playerIndex, actionReq) {
 io.on('connection', (socket) => {
     console.log(`[+] ${socket.id}`);
 
-    socket.on('createRoom', ({ name, totalSeats, numAI }) => {
+    socket.on('startSolo', ({ name, aiCount }) => {
         const existing = getRoomBySocket(socket.id);
-        if (existing) return socket.emit('error', 'You are already in a room.');
-        if (!name || !totalSeats) return socket.emit('error', 'Invalid parameters');
-        totalSeats = Math.max(2, Math.min(6, parseInt(totalSeats)));
-        numAI = Math.max(0, Math.min(totalSeats - 1, parseInt(numAI) || 0));
+        if (existing) return socket.emit('error', 'Solo game already running for this connection.');
 
-        const room = createRoom(socket.id, name.trim().substring(0, 20), totalSeats, numAI);
+        const safeName = (name || 'You').toString().trim().substring(0, 20) || 'You';
+        const bots = Math.max(1, Math.min(5, parseInt(aiCount, 10) || 3));
+        const totalSeats = Math.max(2, Math.min(6, bots + 1));
+
+        const room = createRoom(socket.id, safeName, totalSeats, bots);
         socket.join(room.code);
-        socket.emit('roomCreated', { ...lobbyInfo(room, socket.id), isHost: true });
-        console.log(`Room ${room.code} created by ${name}`);
+        socket.emit('soloReady', { ...lobbyInfo(room, socket.id), isHost: true });
+        startGameInRoom(room);
+        console.log(`Solo game started for ${safeName} (${totalSeats - 1} AI)`);
+    });
+
+    socket.on('createRoom', ({ name, totalSeats, numAI }) => {
+        socket.emit('error', 'Multiplayer is disabled. Use Play vs AI.');
     });
 
     socket.on('joinRoom', ({ name, code }) => {
-        const existing = getRoomBySocket(socket.id);
-        if (existing) return socket.emit('error', 'You are already in a room.');
-        if (!name || !code) return socket.emit('error', 'Invalid parameters');
-        const err = joinRoom(socket.id, name.trim().substring(0, 20), code.toUpperCase());
-        if (err) return socket.emit('error', err);
-
-        const room = rooms.get(code.toUpperCase());
-        socket.join(room.code);
-        socket.emit('joinedRoom', { ...lobbyInfo(room, socket.id), isHost: false });
-        emitLobby(room);
-        console.log(`${name} joined room ${room.code}`);
+        socket.emit('error', 'Multiplayer is disabled. Use Play vs AI.');
     });
 
     socket.on('startGame', () => {
-        const room = getRoomBySocket(socket.id);
-        if (!room) return;
-        if (socket.id !== room.hostSocketId) return socket.emit('error', 'Only the host can start the game');
-        if (room.phase !== 'lobby') return;
-
-        // Fill any remaining empty human slots with AI
-        let aiCount = room.numAI;
-        room.slots.forEach(s => {
-            if (!s.isAI && !s.socketId) {
-                s.isAI = true;
-                aiCount++;
-                s.name = `AI ${aiCount}`;
-            }
-        });
-
-        startGameInRoom(room);
-        console.log(`Game started in room ${room.code}`);
+        socket.emit('error', 'Multiplayer is disabled. Use Play vs AI.');
     });
 
     socket.on('action', ({ type, amount }) => {
