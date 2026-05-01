@@ -210,9 +210,12 @@ body {
     position: absolute;
     top: 16px;
     left: 18px;
+    display: flex;
+    gap: 8px;
     z-index: 42;
 }
 
+#backToLandingBtn,
 #helpBtn {
     width: 34px;
     height: 34px;
@@ -226,6 +229,7 @@ body {
     transition: transform 140ms ease, box-shadow 180ms ease;
 }
 
+#backToLandingBtn:hover,
 #helpBtn:hover {
     transform: scale(1.05);
     box-shadow: 0 0 12px rgba(255, 215, 0, 0.5);
@@ -910,5 +914,199 @@ input[type="number"] {
 
     #potDisplay {
         top: calc(50% - 90px);
+    }
+}
+
+@media (max-width: 768px) {
+    body {
+        align-items: stretch;
+    }
+
+    .lobby-box {
+        width: min(96vw, 520px);
+        border-radius: 14px;
+        padding: 22px 16px 16px;
+    }
+
+    .lobby-box h1 {
+        font-size: 26px;
+    }
+
+    #gameContainer {
+        width: 100vw;
+        height: 100vh;
+        max-width: none;
+        border-width: 8px;
+        border-radius: 0;
+        padding: 14px;
+    }
+
+    #gameContainer::before {
+        top: 14px;
+        left: 14px;
+        right: 14px;
+        bottom: 14px;
+    }
+
+    #performancePanel {
+        display: none;
+    }
+
+    #potDisplay {
+        top: calc(50% - 64px);
+        font-size: 17px;
+        padding: 7px 14px;
+    }
+
+    #communityCards {
+        top: 50%;
+        min-width: min(260px, 92vw);
+        min-height: 74px;
+        padding: 6px 8px;
+        gap: 4px;
+    }
+
+    .card {
+        width: 40px;
+        height: 56px;
+        border-width: 1px;
+    }
+
+    .card .rank {
+        font-size: 16px;
+    }
+
+    .card .suit {
+        font-size: 18px;
+    }
+
+    .card.face-down::before {
+        font-size: 22px;
+    }
+
+    #player0 {
+        bottom: 104px;
+        left: 50%;
+    }
+
+    #player1 {
+        left: 6px;
+        top: 58%;
+    }
+
+    #player2 {
+        top: 6px;
+        left: 50%;
+    }
+
+    #player3 {
+        right: 6px;
+        top: 58%;
+    }
+
+    #player4 {
+        right: 10px;
+        top: 22%;
+    }
+
+    #player5 {
+        right: 10px;
+        bottom: 28%;
+    }
+
+    .player {
+        gap: 4px;
+    }
+
+    .player-info {
+        min-width: 92px;
+        padding: 4px 6px;
+        border-width: 1px;
+    }
+
+    .player-name {
+        font-size: 11px;
+        margin-bottom: 2px;
+    }
+
+    .player-chips,
+    .player-bet,
+    .player-status {
+        font-size: 10px;
+    }
+
+    #controls {
+        width: calc(100vw - 20px);
+        max-width: none;
+        bottom: 8px;
+        gap: 6px;
+        padding: 8px;
+        border-width: 1px;
+    }
+
+    button {
+        padding: 8px 10px;
+        font-size: 11px;
+    }
+
+    input[type="number"] {
+        width: 82px;
+        padding: 7px;
+        font-size: 12px;
+    }
+
+    #gameLog {
+        left: 10px;
+        right: 10px;
+        top: 50px;
+        width: auto;
+        max-height: 96px;
+        padding: 6px 8px;
+        border-width: 1px;
+    }
+
+    #gameLog h3 {
+        font-size: 12px;
+        margin-bottom: 4px;
+    }
+
+    .log-entry {
+        font-size: 10px;
+        padding: 2px 0;
+    }
+
+    #backToLandingBtn,
+    #helpBtn {
+        width: 28px;
+        height: 28px;
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    .lobby-box {
+        padding: 18px 12px 12px;
+    }
+
+    .room-code-display {
+        font-size: 30px;
+        letter-spacing: 5px;
+    }
+
+    .lobby-btn {
+        font-size: 14px;
+        padding: 11px 12px;
+    }
+
+    #nameInput, #codeInput {
+        font-size: 16px;
+    }
+
+    #player0 {
+        bottom: 110px;
+    }
+
+    #controls {
+        justify-content: space-between;
     }
 }
