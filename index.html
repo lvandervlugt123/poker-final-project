@@ -531,11 +531,19 @@
         <div class="lobby-box">
             <h1>♠ Texas Hold'em ♠</h1>
 
+            <!-- Step 0: Landing choices -->
+            <div id="stepLanding">
+                <p class="lobby-sub">Choose how you want to play</p>
+                <button id="btnInstantAi" class="lobby-btn primary">⚡ Instant Play vs AI</button>
+                <button id="btnMultiplayer" class="lobby-btn secondary">🌐 Multiplayer (Create / Join Room)</button>
+            </div>
+
             <!-- Step 1: Enter name -->
-            <div id="stepName">
+            <div id="stepName" class="hidden">
                 <p class="lobby-sub">Enter your name to get started</p>
                 <input type="text" id="nameInput" placeholder="Your name" maxlength="20" autocomplete="off">
                 <button id="btnContinue" class="lobby-btn primary">Continue →</button>
+                <button id="btnBackName" class="lobby-btn back">← Back</button>
             </div>
 
             <!-- Step 2: Create or Join -->
@@ -591,7 +599,7 @@
                 <div id="playerSlots" class="slot-list"></div>
                 <button id="btnStart" class="lobby-btn primary hidden">▶ Start Game</button>
                 <p id="waitHint" class="lobby-hint">Waiting for players to join…</p>
-                <button id="btnBack4" class="lobby-btn back">← Leave Room</button>
+                <button id="btnBack4" class="lobby-btn back">← Back to Landing</button>
             </div>
 
             <p id="lobbyError" class="lobby-error"></p>
@@ -601,6 +609,7 @@
     <div id="gameContainer" class="hidden">
         <!-- Players will be dynamically created -->
         <div id="topHud">
+            <button id="backToLandingBtn" title="Back to Landing" aria-label="Back to Landing">←</button>
             <button id="helpBtn" title="How to Play" aria-label="How to Play">?</button>
         </div>
 
