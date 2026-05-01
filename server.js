@@ -85,11 +85,17 @@ function getSeatBySocket(room, socketId) {
     return room.slots.find(s => s.socketId === socketId)?.seat ?? -1;
 }
 
-function lobbyInfo(room) {
+function getSlotBySocket(room, socketId) {
+    return room.slots.find((s) => s.socketId === socketId) || null;
+}
+
+function lobbyInfo(room, viewerSocketId = null) {
+    const viewerSeat = viewerSocketId ? getSeatBySocket(room, viewerSocketId) : -1;
     return {
         code: room.code,
         totalSeats: room.totalSeats,
         numAI: room.numAI,
+        viewerSeat,
         slots: room.slots.map(s => ({
             seat: s.seat,
             name: s.name,
@@ -104,7 +110,7 @@ function emitLobby(room) {
         if (!s.isAI && s.socketId) {
             const sock = io.sockets.sockets.get(s.socketId);
             if (sock) sock.emit('lobbyUpdate', {
-                ...lobbyInfo(room),
+                ...lobbyInfo(room, s.socketId),
                 isHost: s.socketId === room.hostSocketId
             });
         }
@@ -705,23 +711,28 @@ io.on('connection', (socket) => {
     console.log(`[+] ${socket.id}`);
 
     socket.on('createRoom', ({ name, totalSeats, numAI }) => {
+        const existing = getRoomBySocket(socket.id);
+        if (existing) return socket.emit('error', 'You are already in a room.');
         if (!name || !totalSeats) return socket.emit('error', 'Invalid parameters');
         totalSeats = Math.max(2, Math.min(6, parseInt(totalSeats)));
         numAI = Math.max(0, Math.min(totalSeats - 1, parseInt(numAI) || 0));
 
         const room = createRoom(socket.id, name.trim().substring(0, 20), totalSeats, numAI);
         socket.join(room.code);
-        socket.emit('roomCreated', { ...lobbyInfo(room), isHost: true });
+        socket.emit('roomCreated', { ...lobbyInfo(room, socket.id), isHost: true });
         console.log(`Room ${room.code} created by ${name}`);
     });
 
     socket.on('joinRoom', ({ name, code }) => {
+        const existing = getRoomBySocket(socket.id);
+        if (existing) return socket.emit('error', 'You are already in a room.');
         if (!name || !code) return socket.emit('error', 'Invalid parameters');
         const err = joinRoom(socket.id, name.trim().substring(0, 20), code.toUpperCase());
         if (err) return socket.emit('error', err);
 
         const room = rooms.get(code.toUpperCase());
         socket.join(room.code);
+        socket.emit('joinedRoom', { ...lobbyInfo(room, socket.id), isHost: false });
         emitLobby(room);
         console.log(`${name} joined room ${room.code}`);
     });
@@ -767,7 +778,7 @@ io.on('connection', (socket) => {
         const room = getRoomBySocket(socket.id);
         if (!room) return;
 
-        const slot = room.slots.find(s => s.socketId === socket.id);
+        const slot = getSlotBySocket(room, socket.id);
         if (!slot) return;
 
         if (room.phase === 'lobby') {
