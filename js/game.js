@@ -20,6 +20,7 @@ let mySeat = -1;
 let numPlayers = 0;
 let isHost = false;
 let playerName = '';
+let quickPlayPending = false;
 
 const lobbySettings = { totalSeats: 4, numAI: 3 };
 
@@ -33,7 +34,7 @@ function visualIndex(seatIdx) {
 
 /* ===== LOBBY HELPERS ===== */
 function showStep(id) {
-    ['stepName','stepMode','stepCreate','stepJoin','stepWaiting'].forEach(s => {
+    ['stepLanding','stepName','stepMode','stepCreate','stepJoin','stepWaiting'].forEach(s => {
         document.getElementById(s).classList.add('hidden');
     });
     document.getElementById(id).classList.remove('hidden');
@@ -44,13 +45,31 @@ function setLobbyError(msg) {
     document.getElementById('lobbyError').textContent = msg;
 }
 
+function backToLanding() {
+    location.reload();
+}
+
+function startInstantAI() {
+    quickPlayPending = true;
+    playerName = 'You';
+    socket.emit('createRoom', {
+        name: playerName,
+        totalSeats: 4,
+        numAI: 3
+    });
+}
+
 /* ===== LOBBY BUTTON EVENTS ===== */
+document.getElementById('btnInstantAi').addEventListener('click', startInstantAI);
+document.getElementById('btnMultiplayer').addEventListener('click', () => showStep('stepName'));
+
 document.getElementById('btnContinue').addEventListener('click', () => {
     const val = document.getElementById('nameInput').value.trim();
     if (!val) return setLobbyError('Please enter a name.');
     playerName = val;
     showStep('stepMode');
 });
+document.getElementById('btnBackName').addEventListener('click', () => showStep('stepLanding'));
 document.getElementById('nameInput').addEventListener('keypress', e => {
     if (e.key === 'Enter') document.getElementById('btnContinue').click();
 });
@@ -104,7 +123,8 @@ document.getElementById('codeInput').addEventListener('keypress', e => {
 document.getElementById('btnBack3').addEventListener('click', () => showStep('stepMode'));
 
 document.getElementById('btnStart').addEventListener('click', () => socket.emit('startGame'));
-document.getElementById('btnBack4').addEventListener('click', () => location.reload());
+document.getElementById('btnBack4').addEventListener('click', backToLanding);
+document.getElementById('backToLandingBtn').addEventListener('click', backToLanding);
 
 /* ===== WAITING ROOM RENDER ===== */
 function renderWaitingRoom(data) {
@@ -143,6 +163,13 @@ socket.on('roomCreated', (data) => {
     isHost = true;
     mySeat = Number.isInteger(data.viewerSeat) ? data.viewerSeat : 0;
     numPlayers = data.totalSeats;
+
+    if (quickPlayPending) {
+        quickPlayPending = false;
+        socket.emit('startGame');
+        return;
+    }
+
     renderWaitingRoom(data);
     showStep('stepWaiting');
 });
